@@ -100,17 +100,14 @@ export default function GameMode({ systemPrompt: initialSystemPrompt, onClose }:
                 const jsonStr = line.substring(2);
                 const data = JSON.parse(jsonStr);
 
-                // Handle tool calls
-                if (data.toolCallId && data.result) {
-                  const result = data.result;
-                  if (result.html) {
-                    setCurrentHtml(result.html);
-                    setGameTitle(result.title || 'Game');
-                  }
+                // Handle custom data events
+                if (data.type === 'title' && data.content) {
+                  setGameTitle(data.content);
+                } else if (data.type === 'html' && data.content) {
+                  setCurrentHtml(data.content);
                 }
-
                 // Handle text content
-                if (data.content) {
+                else if (data.content && typeof data.content === 'string') {
                   assistantContent += data.content;
                 }
               } catch (e) {
