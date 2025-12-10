@@ -1,7 +1,19 @@
-import { openai } from '@ai-sdk/openai';
+import { createVertex } from '@ai-sdk/google-vertex';
 import { createDataStreamResponse, streamText, tool } from 'ai';
 import { z } from 'zod';
 import { applyDiffToContent, DiffTextToObject, parseDiffContent, isDiffContent } from '@/lib/game-utils';
+
+const vertex = createVertex({
+  baseURL: "https://aiplatform.googleapis.com/v1/projects/dreamcore-472900/locations/global/publishers/google",
+  location: "global",
+  project: "dreamcore-472900",
+  googleAuthOptions: {
+    credentials: {
+      client_email: process.env.GOOGLE_CLIENT_EMAIL,
+      private_key: process.env.GOOGLE_PRIVATE_KEY,
+    },
+  },
+});
 
 export const maxDuration = 60;
 
@@ -11,7 +23,7 @@ export async function POST(req: Request) {
   return createDataStreamResponse({
     execute: async (dataStream) => {
       const result = streamText({
-        model: openai('gpt-4o') as any,
+        model: vertex('gemini-3-pro-preview') as any,
         system: systemPrompt,
         messages,
         tools: {
