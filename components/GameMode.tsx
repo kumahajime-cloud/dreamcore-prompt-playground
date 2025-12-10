@@ -3,13 +3,51 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/lib/types';
 import GamePreview from './GamePreview';
+import {
+  dreamcoreRegular,
+  dreamcoreGameDesign,
+  dreamcoreCodeRules,
+  dreamcoreCreate,
+  dreamcoreUpdate,
+  dreamcoreBugfix,
+} from '@/lib/dreamcore-prompts';
+
+const PRESET_PROMPTS = {
+  dreamcore_regular: {
+    name: 'DreamCore: Regular',
+    prompt: dreamcoreRegular,
+  },
+  dreamcore_game_design: {
+    name: 'DreamCore: Game Design',
+    prompt: dreamcoreGameDesign,
+  },
+  dreamcore_code_rules: {
+    name: 'DreamCore: Code Rules',
+    prompt: dreamcoreCodeRules,
+  },
+  dreamcore_create: {
+    name: 'DreamCore: Create Game',
+    prompt: dreamcoreCreate,
+  },
+  dreamcore_update: {
+    name: 'DreamCore: Update Game',
+    prompt: dreamcoreUpdate,
+  },
+  dreamcore_bugfix: {
+    name: 'DreamCore: Bug Fix',
+    prompt: dreamcoreBugfix,
+  },
+};
 
 interface GameModeProps {
   systemPrompt: string;
   onClose: () => void;
 }
 
-export default function GameMode({ systemPrompt, onClose }: GameModeProps) {
+export default function GameMode({ systemPrompt: initialSystemPrompt, onClose }: GameModeProps) {
+  const [systemPrompt, setSystemPrompt] = useState(initialSystemPrompt);
+  const [selectedPreset, setSelectedPreset] = useState('dreamcore_create');
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [currentHtml, setCurrentHtml] = useState('');
   const [gameTitle, setGameTitle] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -111,6 +149,12 @@ export default function GameMode({ systemPrompt, onClose }: GameModeProps) {
     scrollToBottom();
   }, [messages]);
 
+  const handlePresetChange = (presetKey: string) => {
+    setSelectedPreset(presetKey);
+    const preset = PRESET_PROMPTS[presetKey as keyof typeof PRESET_PROMPTS];
+    setSystemPrompt(preset.prompt);
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
       {/* Header */}
@@ -118,16 +162,64 @@ export default function GameMode({ systemPrompt, onClose }: GameModeProps) {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           ゲーム生成モード
         </h1>
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-        >
-          閉じる
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowPromptEditor(!showPromptEditor)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            {showPromptEditor ? 'プロンプト非表示' : 'プロンプト編集'}
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+          >
+            閉じる
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
+        {/* Prompt Editor (Collapsible) */}
+        {showPromptEditor && (
+          <div className="w-80 flex flex-col bg-gray-50 dark:bg-gray-900 border-r border-gray-700 p-4 overflow-y-auto">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+              システムプロンプト
+            </h2>
+
+            {/* Preset Selection */}
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                プリセット
+              </label>
+              <select
+                value={selectedPreset}
+                onChange={(e) => handlePresetChange(e.target.value)}
+                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white"
+              >
+                {Object.entries(PRESET_PROMPTS).map(([key, preset]) => (
+                  <option key={key} value={key}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Prompt Text Area */}
+            <div className="flex-1 flex flex-col">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                プロンプト編集
+              </label>
+              <textarea
+                value={systemPrompt}
+                onChange={(e) => setSystemPrompt(e.target.value)}
+                className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm resize-none text-gray-900 dark:text-white"
+                placeholder="システムプロンプトを入力..."
+              />
+            </div>
+          </div>
+        )}
+
         {/* Chat Area */}
         <div className="flex-1 flex flex-col border-r border-gray-700">
           {/* Messages */}
