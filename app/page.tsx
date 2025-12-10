@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message, Conversation, CustomPrompt } from '@/lib/types';
 import { conversationStorage, promptStorage, generateId } from '@/lib/storage';
+import CompareMode from '@/components/CompareMode';
 
 const PRESET_PROMPTS = {
   default: {
@@ -39,6 +40,7 @@ export default function Home() {
   const [showPromptManager, setShowPromptManager] = useState(false);
   const [showConversationList, setShowConversationList] = useState(false);
   const [newPromptName, setNewPromptName] = useState('');
+  const [showCompareMode, setShowCompareMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 初期化
@@ -237,6 +239,10 @@ export default function Home() {
     reader.readAsText(file);
   };
 
+  if (showCompareMode) {
+    return <CompareMode onClose={() => setShowCompareMode(false)} />;
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* 左パネル: システムプロンプト編集 */}
@@ -246,6 +252,12 @@ export default function Home() {
             システムプロンプト
           </h2>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowCompareMode(true)}
+              className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
+            >
+              比較
+            </button>
             <button
               onClick={() => setShowPromptManager(!showPromptManager)}
               className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
