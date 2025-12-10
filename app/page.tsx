@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Message, Conversation, CustomPrompt } from '@/lib/types';
 import { conversationStorage, promptStorage, generateId } from '@/lib/storage';
 import CompareMode from '@/components/CompareMode';
+import GameMode from '@/components/GameMode';
 import {
   dreamcoreRegular,
   dreamcoreGameDesign,
@@ -73,6 +74,7 @@ export default function Home() {
   const [showConversationList, setShowConversationList] = useState(false);
   const [newPromptName, setNewPromptName] = useState('');
   const [showCompareMode, setShowCompareMode] = useState(false);
+  const [showGameMode, setShowGameMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 初期化
@@ -275,6 +277,10 @@ export default function Home() {
     return <CompareMode onClose={() => setShowCompareMode(false)} />;
   }
 
+  if (showGameMode) {
+    return <GameMode systemPrompt={systemPrompt} onClose={() => setShowGameMode(false)} />;
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* 左パネル: システムプロンプト編集 */}
@@ -284,6 +290,12 @@ export default function Home() {
             システムプロンプト
           </h2>
           <div className="flex gap-2">
+            <button
+              onClick={() => setShowGameMode(true)}
+              className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              ゲーム
+            </button>
             <button
               onClick={() => setShowCompareMode(true)}
               className="px-3 py-1 text-sm bg-purple-600 text-white rounded hover:bg-purple-700"
