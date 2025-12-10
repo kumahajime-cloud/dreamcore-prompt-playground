@@ -2,14 +2,51 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/lib/types';
+import {
+  dreamcoreRegular,
+  dreamcoreGameDesign,
+  dreamcoreCodeRules,
+  dreamcoreCreate,
+  dreamcoreUpdate,
+  dreamcoreBugfix,
+} from '@/lib/dreamcore-prompts';
+
+const PRESET_PROMPTS = {
+  dreamcore_regular: {
+    name: 'DreamCore: Regular',
+    prompt: dreamcoreRegular,
+  },
+  dreamcore_game_design: {
+    name: 'DreamCore: Game Design',
+    prompt: dreamcoreGameDesign,
+  },
+  dreamcore_code_rules: {
+    name: 'DreamCore: Code Rules',
+    prompt: dreamcoreCodeRules,
+  },
+  dreamcore_create: {
+    name: 'DreamCore: Create Game',
+    prompt: dreamcoreCreate,
+  },
+  dreamcore_update: {
+    name: 'DreamCore: Update Game',
+    prompt: dreamcoreUpdate,
+  },
+  dreamcore_bugfix: {
+    name: 'DreamCore: Bug Fix',
+    prompt: dreamcoreBugfix,
+  },
+};
 
 interface CompareModeProps {
   onClose: () => void;
 }
 
 export default function CompareMode({ onClose }: CompareModeProps) {
-  const [promptA, setPromptA] = useState('あなたは親切で協力的なアシスタントです。ユーザーの質問に丁寧に答えてください。');
-  const [promptB, setPromptB] = useState('あなたは簡潔で効率的なアシスタントです。短く要点を押さえた回答をしてください。');
+  const [promptA, setPromptA] = useState(dreamcoreRegular);
+  const [promptB, setPromptB] = useState(dreamcoreGameDesign);
+  const [selectedPresetA, setSelectedPresetA] = useState('dreamcore_regular');
+  const [selectedPresetB, setSelectedPresetB] = useState('dreamcore_game_design');
   const [messagesA, setMessagesA] = useState<Message[]>([]);
   const [messagesB, setMessagesB] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -95,6 +132,18 @@ export default function CompareMode({ onClose }: CompareModeProps) {
     setMessagesB([]);
   };
 
+  const handlePresetChangeA = (presetKey: string) => {
+    setSelectedPresetA(presetKey);
+    const preset = PRESET_PROMPTS[presetKey as keyof typeof PRESET_PROMPTS];
+    setPromptA(preset.prompt);
+  };
+
+  const handlePresetChangeB = (presetKey: string) => {
+    setSelectedPresetB(presetKey);
+    const preset = PRESET_PROMPTS[presetKey as keyof typeof PRESET_PROMPTS];
+    setPromptB(preset.prompt);
+  };
+
   return (
     <div className="fixed inset-0 bg-gray-900 z-50 flex flex-col">
       {/* ヘッダー */}
@@ -124,6 +173,17 @@ export default function CompareMode({ onClose }: CompareModeProps) {
         <div className="flex-1 flex flex-col border-r border-gray-700">
           <div className="bg-blue-900 p-4">
             <h2 className="text-lg font-semibold text-white mb-2">プロンプト A</h2>
+            <select
+              value={selectedPresetA}
+              onChange={(e) => handlePresetChangeA(e.target.value)}
+              className="w-full px-3 py-2 mb-2 bg-gray-800 text-white rounded-md text-sm"
+            >
+              {Object.entries(PRESET_PROMPTS).map(([key, preset]) => (
+                <option key={key} value={key}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
             <textarea
               value={promptA}
               onChange={(e) => setPromptA(e.target.value)}
@@ -174,6 +234,17 @@ export default function CompareMode({ onClose }: CompareModeProps) {
         <div className="flex-1 flex flex-col">
           <div className="bg-purple-900 p-4">
             <h2 className="text-lg font-semibold text-white mb-2">プロンプト B</h2>
+            <select
+              value={selectedPresetB}
+              onChange={(e) => handlePresetChangeB(e.target.value)}
+              className="w-full px-3 py-2 mb-2 bg-gray-800 text-white rounded-md text-sm"
+            >
+              {Object.entries(PRESET_PROMPTS).map(([key, preset]) => (
+                <option key={key} value={key}>
+                  {preset.name}
+                </option>
+              ))}
+            </select>
             <textarea
               value={promptB}
               onChange={(e) => setPromptB(e.target.value)}
