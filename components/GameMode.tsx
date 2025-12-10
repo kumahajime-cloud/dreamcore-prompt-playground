@@ -95,23 +95,33 @@ export default function GameMode({ systemPrompt: initialSystemPrompt, onClose }:
           const lines = chunk.split('\n');
 
           for (const line of lines) {
+            // Handle text chunks (0: prefix)
             if (line.startsWith('0:')) {
               try {
-                const jsonStr = line.substring(2);
-                const data = JSON.parse(jsonStr);
-
-                // Handle custom data events
-                if (data.type === 'title' && data.content) {
-                  setGameTitle(data.content);
-                } else if (data.type === 'html' && data.content) {
-                  setCurrentHtml(data.content);
-                }
-                // Handle text content
-                else if (data.content && typeof data.content === 'string') {
-                  assistantContent += data.content;
+                const text = JSON.parse(line.substring(2));
+                if (typeof text === 'string') {
+                  assistantContent += text;
                 }
               } catch (e) {
-                console.error('Parse error:', e);
+                console.error('Parse error for text:', e);
+              }
+            }
+
+            // Handle data chunks (2: prefix) - custom data events
+            else if (line.startsWith('2:')) {
+              try {
+                const dataArray = JSON.parse(line.substring(2));
+                if (Array.isArray(dataArray)) {
+                  for (const data of dataArray) {
+                    if (data.type === 'title' && data.content) {
+                      setGameTitle(data.content);
+                    } else if (data.type === 'html' && data.content) {
+                      setCurrentHtml(data.content);
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error('Parse error for data:', e);
               }
             }
           }
