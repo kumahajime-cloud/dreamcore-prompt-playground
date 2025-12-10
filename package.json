@@ -13,15 +13,22 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.54",
+    "@ai-sdk/google": "^2.0.45",
+    "@ai-sdk/google-vertex": "^3.0.88",
     "@anthropic-ai/sdk": "^0.71.2",
+    "@google/generative-ai": "^0.24.1",
     "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^24.10.2",
     "@types/react": "^19.2.7",
+    "ai": "^5.0.108",
+    "diff": "^8.0.2",
     "next": "^16.0.8",
     "openai": "^6.10.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@types/react-dom": "^19.2.3",

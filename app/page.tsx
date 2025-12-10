@@ -4,6 +4,14 @@ import { useState, useRef, useEffect } from 'react';
 import { Message, Conversation, CustomPrompt } from '@/lib/types';
 import { conversationStorage, promptStorage, generateId } from '@/lib/storage';
 import CompareMode from '@/components/CompareMode';
+import {
+  dreamcoreRegular,
+  dreamcoreGameDesign,
+  dreamcoreCodeRules,
+  dreamcoreCreate,
+  dreamcoreUpdate,
+  dreamcoreBugfix,
+} from '@/lib/dreamcore-prompts';
 
 const PRESET_PROMPTS = {
   default: {
@@ -25,6 +33,30 @@ const PRESET_PROMPTS = {
   debug_helper: {
     name: 'デバッグヘルパー',
     prompt: 'あなたはデバッグの専門家です。コードの問題を分析し、解決策を提案してください。',
+  },
+  dreamcore_regular: {
+    name: 'DreamCore: Regular',
+    prompt: dreamcoreRegular,
+  },
+  dreamcore_game_design: {
+    name: 'DreamCore: Game Design',
+    prompt: dreamcoreGameDesign,
+  },
+  dreamcore_code_rules: {
+    name: 'DreamCore: Code Rules',
+    prompt: dreamcoreCodeRules,
+  },
+  dreamcore_create: {
+    name: 'DreamCore: Create Game',
+    prompt: dreamcoreCreate,
+  },
+  dreamcore_update: {
+    name: 'DreamCore: Update Game',
+    prompt: dreamcoreUpdate,
+  },
+  dreamcore_bugfix: {
+    name: 'DreamCore: Bug Fix',
+    prompt: dreamcoreBugfix,
   },
 };
 
