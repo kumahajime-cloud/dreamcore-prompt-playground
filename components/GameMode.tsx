@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/lib/types';
 import GamePreview from './GamePreview';
-import { useChat } from 'ai';
 
 interface GameModeProps {
   systemPrompt: string;
@@ -13,32 +12,96 @@ interface GameModeProps {
 export default function GameMode({ systemPrompt, onClose }: GameModeProps) {
   const [currentHtml, setCurrentHtml] = useState('');
   const [gameTitle, setGameTitle] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
-    api: '/api/game',
-    body: {
-      systemPrompt,
-      currentHtml,
-    },
-    onToolCall: ({ toolCall }) => {
-      console.log('Tool called:', toolCall);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
 
-      // Handle tool results
-      if (toolCall.toolName === 'createHtml' ||
-          toolCall.toolName === 'updateHtml' ||
-          toolCall.toolName === 'bugfixHtml' ||
-          toolCall.toolName === 'manageHtml') {
+    const userMessage: Message = {
+      role: 'user',
+      content: input,
+      timestamp: Date.now(),
+    };
 
-        const args = toolCall.args as any;
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
 
-        if (args.html) {
-          setCurrentHtml(args.html);
-          setGameTitle(args.title || 'Game');
+    try {
+      const response = await fetch('/api/game', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemPrompt,
+          messages: [...messages, userMessage],
+          currentHtml,
+        }),
+      });
+
+      if (!response.ok) throw new Error('API request failed');
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('0:')) {
+              try {
+                const jsonStr = line.substring(2);
+                const data = JSON.parse(jsonStr);
+
+                // Handle tool calls
+                if (data.toolCallId && data.result) {
+                  const result = data.result;
+                  if (result.html) {
+                    setCurrentHtml(result.html);
+                    setGameTitle(result.title || 'Game');
+                  }
+                }
+
+                // Handle text content
+                if (data.content) {
+                  assistantContent += data.content;
+                }
+              } catch (e) {
+                console.error('Parse error:', e);
+              }
+            }
+          }
         }
       }
-    },
-  });
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: assistantContent || 'ゲームを生成しました。',
+        timestamp: Date.now(),
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error:', error);
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: 'エラーが発生しました。',
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -93,20 +156,6 @@ export default function GameMode({ systemPrompt, onClose }: GameModeProps) {
                       {message.role === 'user' ? 'あなた' : 'AI'}
                     </div>
                     <div className="whitespace-pre-wrap">{message.content}</div>
-
-                    {/* Show tool calls */}
-                    {message.toolInvocations && message.toolInvocations.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-600 text-xs opacity-75">
-                        {message.toolInvocations.map((tool: any, toolIndex: number) => (
-                          <div key={toolIndex}>
-                            🔧 {tool.toolName}
-                            {tool.state === 'result' && tool.result.success && (
-                              <span className="ml-2 text-green-400">✓ 成功</span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               ))
@@ -127,7 +176,7 @@ export default function GameMode({ systemPrompt, onClose }: GameModeProps) {
               <input
                 type="text"
                 value={input}
-                onChange={handleInputChange}
+                onChange={(e) => setInput(e.target.value)}
                 placeholder="ゲームの指示を入力..."
                 className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={isLoading}
