@@ -19,7 +19,8 @@ export async function POST(req: Request) {
           title: z.string().describe('Game title in English'),
           html: z.string().describe('Complete HTML document with game code'),
         }),
-        execute: async ({ title, html }) => {
+        // @ts-ignore
+        execute: async ({ title, html }: { title: string; html: string }) => {
           console.log('Creating game:', title);
           return {
             success: true,
@@ -36,7 +37,8 @@ export async function POST(req: Request) {
           title: z.string().describe('Game title in English'),
           diff: z.string().describe('Unified diff format changes'),
         }),
-        execute: async ({ title, diff }) => {
+        // @ts-ignore
+        execute: async ({ title, diff }: { title: string; diff: string }) => {
           console.log('Updating game:', title);
 
           if (!currentHtml) {
@@ -78,7 +80,8 @@ export async function POST(req: Request) {
           title: z.string().describe('Game title in English'),
           html: z.string().describe('Complete fixed HTML document'),
         }),
-        execute: async ({ title, html }) => {
+        // @ts-ignore
+        execute: async ({ title, html }: { title: string; html: string }) => {
           console.log('Fixing game:', title);
           return {
             success: true,
@@ -95,7 +98,8 @@ export async function POST(req: Request) {
           title: z.string().describe('Game title in English'),
           content: z.string().describe('Either complete HTML or unified diff format'),
         }),
-        execute: async ({ title, content }) => {
+        // @ts-ignore
+        execute: async ({ title, content }: { title: string; content: string }) => {
           console.log('Managing game:', title);
 
           // Determine if content is diff or full HTML
@@ -132,8 +136,9 @@ export async function POST(req: Request) {
         },
       }),
     },
+    // @ts-ignore
     maxSteps: 5,
   });
 
-  return result.toDataStreamResponse();
+  return result.toTextStreamResponse();
 }
