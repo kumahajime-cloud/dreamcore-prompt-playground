@@ -14,9 +14,11 @@
   "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
+    "@tailwindcss/postcss": "^4.1.17",
     "@types/node": "^24.10.2",
     "@types/react": "^19.2.7",
     "next": "^16.0.8",
+    "openai": "^6.10.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "typescript": "^5.9.3"

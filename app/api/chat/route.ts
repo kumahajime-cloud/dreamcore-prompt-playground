@@ -1,34 +1,36 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { NextRequest, NextResponse } from 'next/server';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
 });
 
 export async function POST(request: NextRequest) {
   try {
     const { systemPrompt, messages } = await request.json();
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { error: 'ANTHROPIC_API_KEY is not configured' },
+        { error: 'OPENAI_API_KEY is not configured' },
         { status: 500 }
       );
     }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
       max_tokens: 1024,
-      system: systemPrompt,
-      messages: messages.map((msg: { role: string; content: string }) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages.map((msg: { role: string; content: string }) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+      ],
     });
 
-    const content = response.content[0];
-    if (content.type === 'text') {
-      return NextResponse.json({ content: content.text });
+    const content = response.choices[0]?.message?.content;
+    if (content) {
+      return NextResponse.json({ content });
     }
 
     return NextResponse.json(

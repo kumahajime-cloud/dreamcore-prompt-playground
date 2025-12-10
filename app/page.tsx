@@ -1,11 +1,8 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+import { Message, Conversation, CustomPrompt } from '@/lib/types';
+import { conversationStorage, promptStorage, generateId } from '@/lib/storage';
 
 const PRESET_PROMPTS = {
   default: {
@@ -36,7 +33,44 @@ export default function Home() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState('default');
+  const [customPrompts, setCustomPrompts] = useState<CustomPrompt[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [showPromptManager, setShowPromptManager] = useState(false);
+  const [showConversationList, setShowConversationList] = useState(false);
+  const [newPromptName, setNewPromptName] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 初期化
+  useEffect(() => {
+    const loadedPrompts = promptStorage.getAll();
+    const loadedConversations = conversationStorage.getAll();
+    setCustomPrompts(loadedPrompts);
+    setConversations(loadedConversations);
+
+    // 新しい会話を開始
+    const newConv = createNewConversation();
+    setCurrentConversationId(newConv.id);
+  }, []);
+
+  // 会話の自動保存
+  useEffect(() => {
+    if (currentConversationId && messages.length > 0) {
+      const conversation = conversations.find((c) => c.id === currentConversationId);
+      if (conversation) {
+        const updated: Conversation = {
+          ...conversation,
+          messages,
+          systemPrompt,
+          updatedAt: Date.now(),
+        };
+        conversationStorage.save(updated);
+        setConversations((prev) =>
+          prev.map((c) => (c.id === currentConversationId ? updated : c))
+        );
+      }
+    }
+  }, [messages, systemPrompt]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -46,16 +80,38 @@ export default function Home() {
     scrollToBottom();
   }, [messages]);
 
+  const createNewConversation = (): Conversation => {
+    const newConv: Conversation = {
+      id: generateId(),
+      title: '新しい会話',
+      messages: [],
+      systemPrompt: systemPrompt,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    conversationStorage.save(newConv);
+    setConversations((prev) => [newConv, ...prev]);
+    return newConv;
+  };
+
   const handlePresetChange = (presetKey: string) => {
     setSelectedPreset(presetKey);
-    const preset = PRESET_PROMPTS[presetKey as keyof typeof PRESET_PROMPTS];
-    setSystemPrompt(preset.prompt);
+    if (presetKey.startsWith('custom-')) {
+      const promptId = presetKey.replace('custom-', '');
+      const customPrompt = customPrompts.find((p) => p.id === promptId);
+      if (customPrompt) {
+        setSystemPrompt(customPrompt.prompt);
+      }
+    } else {
+      const preset = PRESET_PROMPTS[presetKey as keyof typeof PRESET_PROMPTS];
+      setSystemPrompt(preset.prompt);
+    }
   };
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
-    const userMessage: Message = { role: 'user', content: input };
+    const userMessage: Message = { role: 'user', content: input, timestamp: Date.now() };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -80,6 +136,7 @@ export default function Home() {
       const assistantMessage: Message = {
         role: 'assistant',
         content: data.content,
+        timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
@@ -87,6 +144,7 @@ export default function Home() {
       const errorMessage: Message = {
         role: 'assistant',
         content: 'エラーが発生しました。もう一度お試しください。',
+        timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -94,17 +152,174 @@ export default function Home() {
     }
   };
 
-  const handleReset = () => {
+  const handleNewConversation = () => {
+    const newConv = createNewConversation();
+    setCurrentConversationId(newConv.id);
     setMessages([]);
+    setSystemPrompt(PRESET_PROMPTS.default.prompt);
+    setSelectedPreset('default');
+  };
+
+  const handleLoadConversation = (conv: Conversation) => {
+    setCurrentConversationId(conv.id);
+    setMessages(conv.messages);
+    setSystemPrompt(conv.systemPrompt);
+    setShowConversationList(false);
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    conversationStorage.delete(id);
+    setConversations((prev) => prev.filter((c) => c.id !== id));
+    if (currentConversationId === id) {
+      handleNewConversation();
+    }
+  };
+
+  const handleSavePrompt = () => {
+    if (!newPromptName.trim()) return;
+
+    const newPrompt: CustomPrompt = {
+      id: generateId(),
+      name: newPromptName,
+      prompt: systemPrompt,
+      createdAt: Date.now(),
+    };
+
+    promptStorage.save(newPrompt);
+    setCustomPrompts((prev) => [...prev, newPrompt]);
+    setNewPromptName('');
+    alert('プロンプトを保存しました');
+  };
+
+  const handleDeletePrompt = (id: string) => {
+    promptStorage.delete(id);
+    setCustomPrompts((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleExportConversation = () => {
+    if (!currentConversationId) return;
+    const conv = conversations.find((c) => c.id === currentConversationId);
+    if (!conv) return;
+
+    const text = conversationStorage.exportAsText(conv);
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `conversation-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportPrompts = () => {
+    const json = promptStorage.export(customPrompts);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prompts-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportPrompts = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const json = event.target?.result as string;
+      const imported = promptStorage.import(json);
+      imported.forEach((prompt) => promptStorage.save(prompt));
+      setCustomPrompts(promptStorage.getAll());
+      alert(`${imported.length}件のプロンプトをインポートしました`);
+    };
+    reader.readAsText(file);
   };
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* 左パネル: システムプロンプト編集 */}
       <div className="w-1/3 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
-          システムプロンプト
-        </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            システムプロンプト
+          </h2>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowPromptManager(!showPromptManager)}
+              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+            >
+              管理
+            </button>
+          </div>
+        </div>
+
+        {/* プロンプト管理パネル */}
+        {showPromptManager && (
+          <div className="mb-4 p-4 bg-gray-100 dark:bg-gray-700 rounded-md">
+            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">
+              プロンプト管理
+            </h3>
+            <div className="space-y-2 mb-4">
+              <input
+                type="text"
+                value={newPromptName}
+                onChange={(e) => setNewPromptName(e.target.value)}
+                placeholder="プロンプト名"
+                className="w-full px-3 py-2 border rounded-md dark:bg-gray-600 dark:text-white text-sm"
+              />
+              <button
+                onClick={handleSavePrompt}
+                className="w-full px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+              >
+                現在のプロンプトを保存
+              </button>
+            </div>
+            <div className="space-y-2 mb-4">
+              <button
+                onClick={handleExportPrompts}
+                className="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+              >
+                プロンプトをエクスポート
+              </button>
+              <label className="block">
+                <span className="w-full px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm cursor-pointer block text-center">
+                  プロンプトをインポート
+                </span>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportPrompts}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            {customPrompts.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">
+                  保存済みプロンプト
+                </p>
+                <div className="space-y-1">
+                  {customPrompts.map((prompt) => (
+                    <div
+                      key={prompt.id}
+                      className="flex justify-between items-center p-2 bg-white dark:bg-gray-600 rounded text-sm"
+                    >
+                      <span className="text-gray-900 dark:text-white">{prompt.name}</span>
+                      <button
+                        onClick={() => handleDeletePrompt(prompt.id)}
+                        className="text-red-600 hover:text-red-800 text-xs"
+                      >
+                        削除
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* プリセット選択 */}
         <div className="mb-4">
@@ -119,6 +334,11 @@ export default function Home() {
             {Object.entries(PRESET_PROMPTS).map(([key, preset]) => (
               <option key={key} value={key}>
                 {preset.name}
+              </option>
+            ))}
+            {customPrompts.map((prompt) => (
+              <option key={prompt.id} value={`custom-${prompt.id}`}>
+                {prompt.name} (カスタム)
               </option>
             ))}
           </select>
@@ -139,33 +359,69 @@ export default function Home() {
 
         <div className="space-y-2">
           <button
-            onClick={handleReset}
-            className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+            onClick={handleNewConversation}
+            className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
-            会話をリセット
+            新しい会話を開始
           </button>
-        </div>
-
-        <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900 rounded-md">
-          <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-            使い方
-          </h3>
-          <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
-            <li>• プリセットからテンプレートを選択</li>
-            <li>• システムプロンプトを自由に編集</li>
-            <li>• 右側のチャットでAIの動作を確認</li>
-            <li>• 会話をリセットして新しいテストを開始</li>
-          </ul>
+          <button
+            onClick={handleExportConversation}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            会話をエクスポート
+          </button>
         </div>
       </div>
 
       {/* 右パネル: チャット */}
       <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
-        <div className="border-b border-gray-200 dark:border-gray-700 p-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            チャット
-          </h2>
+        <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">チャット</h2>
+          <button
+            onClick={() => setShowConversationList(!showConversationList)}
+            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+          >
+            会話履歴
+          </button>
         </div>
+
+        {/* 会話履歴パネル */}
+        {showConversationList && (
+          <div className="border-b border-gray-200 dark:border-gray-700 p-4 max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-700">
+            <h3 className="font-semibold mb-2 text-gray-900 dark:text-white">会話履歴</h3>
+            {conversations.length === 0 ? (
+              <p className="text-sm text-gray-500">会話履歴がありません</p>
+            ) : (
+              <div className="space-y-2">
+                {conversations.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className="flex justify-between items-center p-2 bg-white dark:bg-gray-600 rounded cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-500"
+                    onClick={() => handleLoadConversation(conv)}
+                  >
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-gray-900 dark:text-white">
+                        {conv.title}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(conv.updatedAt).toLocaleString('ja-JP')}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteConversation(conv.id);
+                      }}
+                      className="text-red-600 hover:text-red-800 text-xs ml-2"
+                    >
+                      削除
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* メッセージ表示エリア */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -199,9 +455,7 @@ export default function Home() {
           {loading && (
             <div className="flex justify-start">
               <div className="max-w-3xl px-4 py-3 rounded-lg bg-gray-200 dark:bg-gray-700">
-                <div className="text-gray-600 dark:text-gray-400">
-                  考え中...
-                </div>
+                <div className="text-gray-600 dark:text-gray-400">考え中...</div>
               </div>
             </div>
           )}
