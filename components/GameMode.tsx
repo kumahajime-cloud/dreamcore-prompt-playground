@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/lib/types';
 import GamePreview from './GamePreview';
-import { useChat } from 'ai/react';
+import { useChat } from 'ai';
 
 interface GameModeProps {
   systemPrompt: string;
