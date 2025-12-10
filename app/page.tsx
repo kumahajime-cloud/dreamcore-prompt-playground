@@ -15,26 +15,6 @@ import {
 } from '@/lib/dreamcore-prompts';
 
 const PRESET_PROMPTS = {
-  default: {
-    name: 'デフォルト',
-    prompt: 'あなたは親切で協力的なアシスタントです。ユーザーの質問に丁寧に答えてください。',
-  },
-  game_master: {
-    name: 'ゲームマスター',
-    prompt: 'あなたは創造的なゲームマスターです。プレイヤーを魅力的なストーリーに引き込み、選択肢を提示して物語を進行させてください。',
-  },
-  rpg_npc: {
-    name: 'RPG NPC',
-    prompt: 'あなたはRPGゲームのキャラクターです。設定された性格とバックストーリーに基づいて、プレイヤーと自然な会話をしてください。',
-  },
-  puzzle_creator: {
-    name: 'パズル作成者',
-    prompt: 'あなたは謎解きやパズルを作成する専門家です。ユーザーに挑戦的で楽しい問題を提供してください。',
-  },
-  debug_helper: {
-    name: 'デバッグヘルパー',
-    prompt: 'あなたはデバッグの専門家です。コードの問題を分析し、解決策を提案してください。',
-  },
   dreamcore_regular: {
     name: 'DreamCore: Regular',
     prompt: dreamcoreRegular,
@@ -62,11 +42,11 @@ const PRESET_PROMPTS = {
 };
 
 export default function Home() {
-  const [systemPrompt, setSystemPrompt] = useState(PRESET_PROMPTS.default.prompt);
+  const [systemPrompt, setSystemPrompt] = useState(PRESET_PROMPTS.dreamcore_regular.prompt);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState('default');
+  const [selectedPreset, setSelectedPreset] = useState('dreamcore_regular');
   const [customPrompts, setCustomPrompts] = useState<CustomPrompt[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -192,8 +172,8 @@ export default function Home() {
     const newConv = createNewConversation();
     setCurrentConversationId(newConv.id);
     setMessages([]);
-    setSystemPrompt(PRESET_PROMPTS.default.prompt);
-    setSelectedPreset('default');
+    setSystemPrompt(PRESET_PROMPTS.dreamcore_regular.prompt);
+    setSelectedPreset('dreamcore_regular');
   };
 
   const handleLoadConversation = (conv: Conversation) => {
