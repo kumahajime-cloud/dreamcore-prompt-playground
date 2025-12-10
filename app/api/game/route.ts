@@ -140,5 +140,6 @@ export async function POST(req: Request) {
     maxSteps: 5,
   });
 
-  return result.toTextStreamResponse();
+  // @ts-ignore
+  return result.toDataStreamResponse();
 }
