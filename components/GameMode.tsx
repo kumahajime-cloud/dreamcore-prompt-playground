@@ -50,8 +50,9 @@ interface GameModeProps {
 }
 
 export default function GameMode({ systemPrompt: initialSystemPrompt, onClose }: GameModeProps) {
-  const [systemPrompt, setSystemPrompt] = useState(initialSystemPrompt);
-  const [selectedPreset, setSelectedPreset] = useState('dreamcore_unified');
+  // Always use dreamcoreRegular for Claude, not the combined prompts
+  const [systemPrompt, setSystemPrompt] = useState(dreamcoreRegular);
+  const [selectedPreset, setSelectedPreset] = useState('dreamcore_regular');
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [currentHtml, setCurrentHtml] = useState('');
   const [gameTitle, setGameTitle] = useState('');
@@ -122,6 +123,15 @@ export default function GameMode({ systemPrompt: initialSystemPrompt, onClose }:
                       setGameTitle(data.content);
                     } else if (data.type === 'html' && data.content) {
                       setCurrentHtml(data.content);
+                    } else if (data.type === 'html-delta' && data.content) {
+                      // html-delta events are streamed chunks - we'll get the final html separately
+                      console.log('HTML delta chunk received');
+                    } else if (data.type === 'clear') {
+                      // Clear signal from tool
+                      console.log('Clear signal received');
+                    } else if (data.type === 'finish') {
+                      // Finish signal from tool
+                      console.log('Finish signal received');
                     }
                   }
                 }

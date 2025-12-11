@@ -252,3 +252,21 @@ export const isDiffContent = (content?: string): boolean => {
 
   return hasHunkHeader && hasDiffLines;
 };
+
+/**
+ * HTMLコンテンツからコードブロックマーカーなどを取り除く
+ */
+export const parseHtmlContent = (content: string): string => {
+  if (!content) return "";
+
+  // <!DOCTYPE html>の前の文字をすべて削除
+  const doctypeIndex = content.indexOf("<!DOCTYPE html>");
+  const startContent = doctypeIndex >= 0 ? content.substring(doctypeIndex) : content;
+
+  // </html>の後の文字をすべて削除
+  const htmlEndIndex = startContent.indexOf("</html>");
+  if (htmlEndIndex >= 0) {
+    return startContent.substring(0, htmlEndIndex + 7); // 7は"</html>"の長さ
+  }
+  return startContent;
+};

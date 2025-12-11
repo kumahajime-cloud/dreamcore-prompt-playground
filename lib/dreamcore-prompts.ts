@@ -138,16 +138,30 @@ export const dreamcoreGameDesign = `# Common Requirements Definition
     - Example: \`if (gameOver) { renderResult(); } else { renderGame(); }\`
   - [IMPORTANT] Game starts immediately: Do not implement a start screen. Launch game directly on page load.
 
-### When Creating 2D Games
-- Use p5.js for 2D games on mobile.
+### Graphics Library Selection (CRITICAL)
+
+**ALWAYS use 2D with p5.js UNLESS the user explicitly requests "3D" in their message.**
+
+### When Creating 2D Games (DEFAULT)
+- **USE THIS BY DEFAULT** - Use p5.js for ALL mobile games
+- This is the DEFAULT and PREFERRED approach for:
+  - Shooting games
+  - Puzzle games
+  - Action games
+  - Casual games
+  - Block breaker games
+  - Any game that doesn't explicitly say "3D"
 
 - Implementation notes:
   - Prefer instance mode to avoid global namespace pollution
   - Implement core loop and touch handlers appropriate for mobile play
   - Organize game objects with classes for clarity
 
-### When Creating 3D Games
-- Actively use Three.js
+### When Creating 3D Games (ONLY IF EXPLICITLY REQUESTED)
+- **DO NOT USE** unless user specifically says "3D" or "three dimensional"
+- Only use Three.js when the user's message contains keywords: "3D", "three dimensional", "first-person", "third-person"
+- Examples that DO NOT require 3D: "shooting game", "simple game", "block breaker", "puzzle"
+- Examples that DO require 3D: "3D shooting game", "first-person maze", "3D racing game"
 
 - Movement rules (camera-relative, yaw-only):
   - Use the camera forward vector flattened on the horizontal plane (set y = 0, then normalize) for forward/backward
@@ -188,11 +202,19 @@ export const dreamcoreGameDesign = `# Common Requirements Definition
 
 ### Audio policy (MANDATORY)
 
-- BGM must use <audio> for **streaming playback**; place \`<audio id="bgm" src="ABS_URL" preload="none" playsinline hidden></audio>\` in DOM.
-- Enable playback only on first user interaction: use \`pointerdown\` with \`bgm.load(); bgm.addEventListener('canplay', ()=>bgm.play(), {once:true});\`
-- Do not wait for \`canplaythrough\`. Do not use \`decodeAudioData\` or ArrayBuffer expansion for BGM.
-- For effects processing, connect via \`AudioContext.createMediaElementSource(bgm)\`.
-- Maintain current \`new Audio(url)\` for sound effects. Set \`preload='none'\` by default and use \`cloneNode(true).play()\` for simultaneous playback.
+**[IMPORTANT] Audio is OPTIONAL - only implement audio when the user explicitly requests it.**
+
+- For simple games (puzzle, block breaker, casual), DO NOT implement audio unless specifically requested
+- Never call undefined functions like \`getAudioContext()\` - always define functions before using them
+- When audio IS requested:
+  - BGM must use <audio> for **streaming playback**; place \`<audio id="bgm" src="ABS_URL" preload="none" playsinline hidden></audio>\` in DOM.
+  - Enable playback only on first user interaction: use \`pointerdown\` with \`bgm.load(); bgm.addEventListener('canplay', ()=>bgm.play(), {once:true});\`
+  - Do not wait for \`canplaythrough\`. Do not use \`decodeAudioData\` or ArrayBuffer expansion for BGM.
+  - For effects processing with AudioContext:
+    - Create AudioContext: \`const audioCtx = new (window.AudioContext || window.webkitAudioContext)();\`
+    - Connect via: \`const source = audioCtx.createMediaElementSource(bgm);\`
+    - Always check if AudioContext exists before creating
+  - For sound effects: Use \`new Audio(url)\`. Set \`preload='none'\` by default and use \`cloneNode(true).play()\` for simultaneous playback.
 `;
 
 export const dreamcoreCodeRules = `You are an AI that generates HTML, CSS, and JavaScript code for games.

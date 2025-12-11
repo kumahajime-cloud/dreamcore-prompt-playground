@@ -74,28 +74,38 @@ export default function Home() {
     setConversations(loadedConversations);
 
     // 新しい会話を開始
-    const newConv = createNewConversation();
+    const newConv: Conversation = {
+      id: generateId(),
+      title: '新しい会話',
+      messages: [],
+      systemPrompt: PRESET_PROMPTS.dreamcore_unified.prompt,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    conversationStorage.save(newConv);
+    setConversations((prev) => [newConv, ...prev]);
     setCurrentConversationId(newConv.id);
   }, []);
 
   // 会話の自動保存
   useEffect(() => {
     if (currentConversationId && messages.length > 0) {
-      const conversation = conversations.find((c) => c.id === currentConversationId);
-      if (conversation) {
-        const updated: Conversation = {
-          ...conversation,
-          messages,
-          systemPrompt,
-          updatedAt: Date.now(),
-        };
-        conversationStorage.save(updated);
-        setConversations((prev) =>
-          prev.map((c) => (c.id === currentConversationId ? updated : c))
-        );
-      }
+      setConversations((prevConversations) => {
+        const conversation = prevConversations.find((c) => c.id === currentConversationId);
+        if (conversation) {
+          const updated: Conversation = {
+            ...conversation,
+            messages,
+            systemPrompt,
+            updatedAt: Date.now(),
+          };
+          conversationStorage.save(updated);
+          return prevConversations.map((c) => (c.id === currentConversationId ? updated : c));
+        }
+        return prevConversations;
+      });
     }
-  }, [messages, systemPrompt]);
+  }, [messages, systemPrompt, currentConversationId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -186,11 +196,23 @@ export default function Home() {
                 if (Array.isArray(dataArray)) {
                   for (const data of dataArray) {
                     if (data.type === 'title' && data.content) {
+                      console.log('[GAME] Title received:', data.content);
                       setGameTitle(data.content);
                       setShowGamePreview(true);
                     } else if (data.type === 'html' && data.content) {
+                      console.log('[GAME] HTML received, length:', data.content.length);
+                      console.log('[GAME] HTML preview:', data.content.substring(0, 200));
                       setCurrentHtml(data.content);
                       setShowGamePreview(true);
+                    } else if (data.type === 'html-delta' && data.content) {
+                      // html-delta events are streamed chunks - we'll get the final html separately
+                      console.log('[GAME] HTML delta chunk received, length:', data.content.length);
+                    } else if (data.type === 'clear') {
+                      // Clear signal from tool
+                      console.log('[GAME] Clear signal received');
+                    } else if (data.type === 'finish') {
+                      // Finish signal from tool
+                      console.log('[GAME] Finish signal received');
                     }
                   }
                 }

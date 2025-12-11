@@ -1,28 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-
 interface GamePreviewProps {
   html: string;
   title: string;
 }
 
 export default function GamePreview({ html, title }: GamePreviewProps) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    if (iframeRef.current && html) {
-      const iframe = iframeRef.current;
-      const doc = iframe.contentDocument || iframe.contentWindow?.document;
-
-      if (doc) {
-        doc.open();
-        doc.write(html);
-        doc.close();
-      }
-    }
-  }, [html]);
-
   if (!html) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
@@ -45,10 +28,12 @@ export default function GamePreview({ html, title }: GamePreviewProps) {
       </div>
       <div className="flex-1 relative">
         <iframe
-          ref={iframeRef}
+          key={html}
           title="Game Preview"
+          srcDoc={html}
           className="absolute inset-0 w-full h-full border-0"
-          sandbox="allow-scripts allow-same-origin"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+          allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; midi; payment; usb; xr-spatial-tracking"
         />
       </div>
     </div>

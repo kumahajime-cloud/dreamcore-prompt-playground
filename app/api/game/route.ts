@@ -1,172 +1,64 @@
-import { createVertex } from '@ai-sdk/google-vertex';
-import { createDataStreamResponse, streamText, tool } from 'ai';
-import { z } from 'zod';
-import { applyDiffToContent, DiffTextToObject, parseDiffContent, isDiffContent } from '@/lib/game-utils';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createDataStreamResponse, streamText, smoothStream } from 'ai';
+import { manageHtml, bugfixHtml } from '@/lib/game-tools';
+import { dreamcoreRegular } from '@/lib/dreamcore-prompts';
 
-const vertex = createVertex({
-  baseURL: "https://aiplatform.googleapis.com/v1/projects/dreamcore-472900/locations/global/publishers/google",
-  location: "global",
-  project: "dreamcore-472900",
-  googleAuthOptions: {
-    credentials: {
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    },
-  },
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 export const maxDuration = 60;
 
+// Helper function to detect bugfix requests
+function isBugfixRequest(userMessage: string): boolean {
+  const lowerMessage = userMessage.toLowerCase().trim();
+  return (
+    lowerMessage === 'fixbug' ||
+    lowerMessage === 'バグ修正' ||
+    lowerMessage.includes('fixbug') ||
+    lowerMessage.includes('バグ修正')
+  );
+}
+
 export async function POST(req: Request) {
   const { messages, systemPrompt, currentHtml } = await req.json();
 
+  // Get the latest user message
+  const latestMessage = messages[messages.length - 1];
+  const isBugfix = latestMessage?.role === 'user' ? isBugfixRequest(latestMessage.content) : false;
+
+  console.log('Game API: isBugfix =', isBugfix);
+  console.log('Game API: currentHtml exists =', !!currentHtml);
+
   return createDataStreamResponse({
     execute: async (dataStream) => {
+      // Determine which tools to make available
+      const activeTools = isBugfix ? ['manageHtml', 'bugfixHtml'] : ['manageHtml'];
+
+      console.log('Game API: activeTools =', activeTools);
+
       const result = streamText({
-        model: vertex('gemini-3-pro-preview') as any,
-        system: systemPrompt,
+        model: anthropic('claude-sonnet-4-5-20250929'),
+        system: systemPrompt || dreamcoreRegular,
         messages,
+        maxSteps: 2,
+        experimental_continueSteps: true,
+        experimental_activeTools: activeTools,
+        experimental_transform: smoothStream({ chunking: 'word' }),
         tools: {
-          createHtml: tool({
-            description: 'Create a new HTML game from scratch. Use this when the user requests a completely new game.',
-            parameters: z.object({
-              title: z.string().describe('Game title in English'),
-              html: z.string().describe('Complete HTML document with game code'),
-            }),
-            execute: async ({ title, html }) => {
-              console.log('Creating game:', title);
-
-              // Send title and HTML to client
-              dataStream.writeData({ type: 'title', content: title });
-              dataStream.writeData({ type: 'html', content: html });
-
-              return {
-                success: true,
-                title,
-                html,
-                action: 'create',
-              };
-            },
+          manageHtml: manageHtml({
+            dataStream,
+            messages,
+            currentHtml,
+            language: 'ja',
           }),
-
-          updateHtml: tool({
-            description: 'Update an existing HTML game using unified diff format. The AI must output ONLY diff format, not full code.',
-            parameters: z.object({
-              title: z.string().describe('Game title in English'),
-              diff: z.string().describe('Unified diff format changes'),
-            }),
-            execute: async ({ title, diff }) => {
-              console.log('Updating game:', title);
-
-              if (!currentHtml) {
-                return {
-                  success: false,
-                  error: 'No existing HTML to update',
-                  action: 'update',
-                };
-              }
-
-              try {
-                // Parse diff content
-                const parsedDiff = parseDiffContent(diff);
-                const diffObject = DiffTextToObject(parsedDiff);
-
-                // Apply diff to current HTML
-                const updatedHtml = applyDiffToContent(currentHtml, diffObject);
-
-                // Send updated HTML to client
-                dataStream.writeData({ type: 'title', content: title });
-                dataStream.writeData({ type: 'html', content: updatedHtml });
-
-                return {
-                  success: true,
-                  title,
-                  html: updatedHtml,
-                  action: 'update',
-                };
-              } catch (error) {
-                console.error('Error applying diff:', error);
-                return {
-                  success: false,
-                  error: 'Failed to apply diff',
-                  action: 'update',
-                };
-              }
-            },
-          }),
-
-          bugfixHtml: tool({
-            description: 'Fix bugs by regenerating the complete HTML game. Use when FIXBUG or バグ修正 is mentioned.',
-            parameters: z.object({
-              title: z.string().describe('Game title in English'),
-              html: z.string().describe('Complete fixed HTML document'),
-            }),
-            execute: async ({ title, html }) => {
-              console.log('Fixing game:', title);
-
-              // Send fixed HTML to client
-              dataStream.writeData({ type: 'title', content: title });
-              dataStream.writeData({ type: 'html', content: html });
-
-              return {
-                success: true,
-                title,
-                html,
-                action: 'bugfix',
-              };
-            },
-          }),
-
-          manageHtml: tool({
-            description: 'Automatically create or update HTML game based on context. Use this for general game creation and updates.',
-            parameters: z.object({
-              title: z.string().describe('Game title in English'),
-              content: z.string().describe('Either complete HTML or unified diff format'),
-            }),
-            execute: async ({ title, content }) => {
-              console.log('Managing game:', title);
-
-              // Determine if content is diff or full HTML
-              if (currentHtml && isDiffContent(content)) {
-                // Update existing game with diff
-                try {
-                  const parsedDiff = parseDiffContent(content);
-                  const diffObject = DiffTextToObject(parsedDiff);
-                  const updatedHtml = applyDiffToContent(currentHtml, diffObject);
-
-                  dataStream.writeData({ type: 'title', content: title });
-                  dataStream.writeData({ type: 'html', content: updatedHtml });
-
-                  return {
-                    success: true,
-                    title,
-                    html: updatedHtml,
-                    action: 'update',
-                  };
-                } catch (error) {
-                  console.error('Error applying diff:', error);
-                  return {
-                    success: false,
-                    error: 'Failed to apply diff',
-                    action: 'update',
-                  };
-                }
-              } else {
-                // Create new game
-                dataStream.writeData({ type: 'title', content: title });
-                dataStream.writeData({ type: 'html', content: content });
-
-                return {
-                  success: true,
-                  title,
-                  html: content,
-                  action: 'create',
-                };
-              }
-            },
+          bugfixHtml: bugfixHtml({
+            dataStream,
+            messages,
+            currentHtml,
+            language: 'ja',
           }),
         },
-        maxSteps: 5,
       });
 
       result.consumeStream();
