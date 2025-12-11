@@ -5,6 +5,7 @@ import { Message, Conversation, CustomPrompt } from '@/lib/types';
 import { conversationStorage, promptStorage, generateId } from '@/lib/storage';
 import CompareMode from '@/components/CompareMode';
 import GameMode from '@/components/GameMode';
+import GamePreview from '@/components/GamePreview';
 import {
   dreamcoreRegular,
   dreamcoreGameDesign,
@@ -55,6 +56,9 @@ export default function Home() {
   const [newPromptName, setNewPromptName] = useState('');
   const [showCompareMode, setShowCompareMode] = useState(false);
   const [showGameMode, setShowGameMode] = useState(false);
+  const [currentHtml, setCurrentHtml] = useState('');
+  const [gameTitle, setGameTitle] = useState('');
+  const [showGamePreview, setShowGamePreview] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 初期化
@@ -133,33 +137,78 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/game', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           systemPrompt,
           messages: [...messages, userMessage],
+          currentHtml,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('API request failed');
+      if (!response.ok) throw new Error('API request failed');
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantContent = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            // Handle text chunks (0: prefix)
+            if (line.startsWith('0:')) {
+              try {
+                const text = JSON.parse(line.substring(2));
+                if (typeof text === 'string') {
+                  assistantContent += text;
+                }
+              } catch (e) {
+                console.error('Parse error for text:', e);
+              }
+            }
+
+            // Handle data chunks (2: prefix) - custom data events
+            else if (line.startsWith('2:')) {
+              try {
+                const dataArray = JSON.parse(line.substring(2));
+                if (Array.isArray(dataArray)) {
+                  for (const data of dataArray) {
+                    if (data.type === 'title' && data.content) {
+                      setGameTitle(data.content);
+                      setShowGamePreview(true);
+                    } else if (data.type === 'html' && data.content) {
+                      setCurrentHtml(data.content);
+                      setShowGamePreview(true);
+                    }
+                  }
+                }
+              } catch (e) {
+                console.error('Parse error for data:', e);
+              }
+            }
+          }
+        }
       }
 
-      const data = await response.json();
       const assistantMessage: Message = {
         role: 'assistant',
-        content: data.content,
+        content: assistantContent || 'ゲームを生成しました。',
         timestamp: Date.now(),
       };
+
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       console.error('Error:', error);
       const errorMessage: Message = {
         role: 'assistant',
-        content: 'エラーが発生しました。もう一度お試しください。',
+        content: 'エラーが発生しました。',
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -264,7 +313,7 @@ export default function Home() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       {/* 左パネル: システムプロンプト編集 */}
-      <div className="w-1/3 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 overflow-y-auto">
+      <div className={`${showGamePreview ? 'w-1/4' : 'w-1/3'} border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 overflow-y-auto`}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
             システムプロンプト
@@ -409,8 +458,8 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 右パネル: チャット */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-gray-800">
+      {/* 中央パネル: チャット */}
+      <div className={`${showGamePreview ? 'w-1/3' : 'flex-1'} flex flex-col bg-white dark:bg-gray-800`}>
         <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">チャット</h2>
           <button
@@ -525,6 +574,24 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* 右パネル: ゲームプレビュー */}
+      {showGamePreview && (
+        <div className="flex-1 flex flex-col border-l border-gray-200 dark:border-gray-700">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-800">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              ゲームプレビュー
+            </h2>
+            <button
+              onClick={() => setShowGamePreview(false)}
+              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+            >
+              閉じる
+            </button>
+          </div>
+          <GamePreview html={currentHtml} title={gameTitle} />
+        </div>
+      )}
     </div>
   );
 }
