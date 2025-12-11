@@ -10,9 +10,14 @@ import {
   dreamcoreCreate,
   dreamcoreUpdate,
   dreamcoreBugfix,
+  dreamcoreUnified,
 } from '@/lib/dreamcore-prompts';
 
 const PRESET_PROMPTS = {
+  dreamcore_unified: {
+    name: 'DreamCore: 統合ゲーム作成',
+    prompt: dreamcoreUnified,
+  },
   dreamcore_regular: {
     name: 'DreamCore: Regular',
     prompt: dreamcoreRegular,
@@ -46,7 +51,7 @@ interface GameModeProps {
 
 export default function GameMode({ systemPrompt: initialSystemPrompt, onClose }: GameModeProps) {
   const [systemPrompt, setSystemPrompt] = useState(initialSystemPrompt);
-  const [selectedPreset, setSelectedPreset] = useState('dreamcore_create');
+  const [selectedPreset, setSelectedPreset] = useState('dreamcore_unified');
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [currentHtml, setCurrentHtml] = useState('');
   const [gameTitle, setGameTitle] = useState('');

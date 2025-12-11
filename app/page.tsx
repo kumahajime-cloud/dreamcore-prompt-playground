@@ -13,9 +13,14 @@ import {
   dreamcoreCreate,
   dreamcoreUpdate,
   dreamcoreBugfix,
+  dreamcoreUnified,
 } from '@/lib/dreamcore-prompts';
 
 const PRESET_PROMPTS = {
+  dreamcore_unified: {
+    name: 'DreamCore: 統合ゲーム作成',
+    prompt: dreamcoreUnified,
+  },
   dreamcore_regular: {
     name: 'DreamCore: Regular',
     prompt: dreamcoreRegular,
@@ -43,11 +48,11 @@ const PRESET_PROMPTS = {
 };
 
 export default function Home() {
-  const [systemPrompt, setSystemPrompt] = useState(PRESET_PROMPTS.dreamcore_regular.prompt);
+  const [systemPrompt, setSystemPrompt] = useState(PRESET_PROMPTS.dreamcore_unified.prompt);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState('dreamcore_regular');
+  const [selectedPreset, setSelectedPreset] = useState('dreamcore_unified');
   const [customPrompts, setCustomPrompts] = useState<CustomPrompt[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -221,8 +226,8 @@ export default function Home() {
     const newConv = createNewConversation();
     setCurrentConversationId(newConv.id);
     setMessages([]);
-    setSystemPrompt(PRESET_PROMPTS.dreamcore_regular.prompt);
-    setSelectedPreset('dreamcore_regular');
+    setSystemPrompt(PRESET_PROMPTS.dreamcore_unified.prompt);
+    setSelectedPreset('dreamcore_unified');
   };
 
   const handleLoadConversation = (conv: Conversation) => {

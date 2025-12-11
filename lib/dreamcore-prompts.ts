@@ -523,3 +523,6 @@ You are a senior game engineer specialized in quickly identifying and fixing bug
 - Never use alert().
 - [CRITICAL] Do not change any text or labels; only fix bugs.
 `;
+
+// Unified Game Creation Prompt - Combines all game-related prompts
+export const dreamcoreUnified = dreamcoreRegular + '\n\n' + dreamcoreGameDesign + '\n\n' + dreamcoreCodeRules + '\n\n' + dreamcoreCreate;
