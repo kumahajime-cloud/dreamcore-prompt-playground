@@ -7,7 +7,7 @@ const anthropic = createAnthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-export const maxDuration = 60;
+export const maxDuration = 300; // 5 minutes for Pro plan
 
 // Helper function to detect bugfix requests
 function isBugfixRequest(userMessage: string): boolean {
