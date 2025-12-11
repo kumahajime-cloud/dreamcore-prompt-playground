@@ -64,6 +64,7 @@ export default function Home() {
   const [currentHtml, setCurrentHtml] = useState('');
   const [gameTitle, setGameTitle] = useState('');
   const [showGamePreview, setShowGamePreview] = useState(false);
+  const [showCode, setShowCode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 初期化
@@ -467,12 +468,22 @@ export default function Home() {
       <div className={`${showGamePreview ? 'w-1/3' : 'flex-1'} flex flex-col bg-white dark:bg-gray-800`}>
         <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">チャット</h2>
-          <button
-            onClick={() => setShowConversationList(!showConversationList)}
-            className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-          >
-            会話履歴
-          </button>
+          <div className="flex gap-2">
+            {currentHtml && !showGamePreview && (
+              <button
+                onClick={() => setShowGamePreview(true)}
+                className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                ゲーム表示
+              </button>
+            )}
+            <button
+              onClick={() => setShowConversationList(!showConversationList)}
+              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+            >
+              会話履歴
+            </button>
+          </div>
         </div>
 
         {/* 会話履歴パネル */}
@@ -585,16 +596,32 @@ export default function Home() {
         <div className="flex-1 flex flex-col border-l border-gray-200 dark:border-gray-700">
           <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center bg-white dark:bg-gray-800">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              ゲームプレビュー
+              {gameTitle || 'ゲームプレビュー'}
             </h2>
-            <button
-              onClick={() => setShowGamePreview(false)}
-              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-            >
-              閉じる
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowCode(!showCode)}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                {showCode ? 'プレビュー' : 'コード表示'}
+              </button>
+              <button
+                onClick={() => setShowGamePreview(false)}
+                className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                閉じる
+              </button>
+            </div>
           </div>
-          <GamePreview html={currentHtml} title={gameTitle} />
+          {showCode ? (
+            <div className="flex-1 overflow-auto bg-gray-900 p-4">
+              <pre className="text-green-400 text-sm font-mono">
+                <code>{currentHtml}</code>
+              </pre>
+            </div>
+          ) : (
+            <GamePreview html={currentHtml} title={gameTitle} />
+          )}
         </div>
       )}
     </div>
