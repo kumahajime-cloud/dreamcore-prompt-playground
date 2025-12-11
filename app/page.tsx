@@ -64,7 +64,6 @@ export default function Home() {
   const [currentHtml, setCurrentHtml] = useState('');
   const [gameTitle, setGameTitle] = useState('');
   const [showGamePreview, setShowGamePreview] = useState(false);
-  const [showCode, setShowCode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // 初期化
@@ -549,6 +548,29 @@ export default function Home() {
                     {message.role === 'user' ? 'あなた' : 'AI'}
                   </div>
                   <div className="whitespace-pre-wrap">{message.content}</div>
+
+                  {/* コード表示（AI応答でゲームが生成された場合） */}
+                  {message.role === 'assistant' && currentHtml && index === messages.length - 1 && (
+                    <details className="mt-3 bg-gray-800 rounded-md overflow-hidden">
+                      <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-white hover:bg-gray-700 select-none">
+                        📄 生成されたコードを表示
+                      </summary>
+                      <div className="p-3 max-h-96 overflow-auto">
+                        <pre className="text-green-400 text-xs font-mono">
+                          <code>{currentHtml}</code>
+                        </pre>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(currentHtml);
+                            alert('コードをコピーしました！');
+                          }}
+                          className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                        >
+                          コピー
+                        </button>
+                      </div>
+                    </details>
+                  )}
                 </div>
               </div>
             ))
@@ -598,30 +620,14 @@ export default function Home() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               {gameTitle || 'ゲームプレビュー'}
             </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowCode(!showCode)}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                {showCode ? 'プレビュー' : 'コード表示'}
-              </button>
-              <button
-                onClick={() => setShowGamePreview(false)}
-                className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-              >
-                閉じる
-              </button>
-            </div>
+            <button
+              onClick={() => setShowGamePreview(false)}
+              className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+            >
+              閉じる
+            </button>
           </div>
-          {showCode ? (
-            <div className="flex-1 overflow-auto bg-gray-900 p-4">
-              <pre className="text-green-400 text-sm font-mono">
-                <code>{currentHtml}</code>
-              </pre>
-            </div>
-          ) : (
-            <GamePreview html={currentHtml} title={gameTitle} />
-          )}
+          <GamePreview html={currentHtml} title={gameTitle} />
         </div>
       )}
     </div>
