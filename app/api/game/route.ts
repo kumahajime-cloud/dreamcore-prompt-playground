@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   return createDataStreamResponse({
     execute: async (dataStream) => {
       // Determine which tools to make available
-      const activeTools = isBugfix ? ['manageHtml', 'bugfixHtml'] : ['manageHtml'];
+      const activeTools: ('manageHtml' | 'bugfixHtml')[] = isBugfix ? ['manageHtml', 'bugfixHtml'] : ['manageHtml'];
 
       console.log('Game API: activeTools =', activeTools);
 
