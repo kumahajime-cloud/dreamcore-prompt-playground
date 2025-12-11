@@ -107,7 +107,7 @@ async function updateExistingDocument({
     system: updatePrompt(language),
     messages: input,
     experimental_transform: smoothStream({ chunking: 'word' }),
-    maxSteps: 2,
+    maxSteps: 5,
     experimental_continueSteps: true,
   });
 
@@ -200,7 +200,7 @@ async function createNewDocument({
       model: vertex('gemini-3-pro-preview') as any,
       system: createPrompt(language),
       messages: input,
-      maxSteps: 2,
+      maxSteps: 5,
       experimental_continueSteps: true,
       experimental_transform: smoothStream({ chunking: 'word' }),
     });
@@ -296,7 +296,7 @@ export const bugfixHtml = ({ dataStream, messages, currentHtml, language = 'en' 
         system: bugfixPrompt(language),
         messages: input,
         temperature: 1,
-        maxSteps: 2,
+        maxSteps: 5,
         experimental_continueSteps: true,
         experimental_transform: smoothStream({ chunking: 'word' }),
       });
